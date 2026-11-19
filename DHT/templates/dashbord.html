@@ -1,0 +1,318 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard - Capteur DHT11</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            padding: 30px;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+            gap: 15px;
+        }
+
+        header h1 {
+            font-size: 27px;
+        }
+
+        .status {
+            color: #16a34a;
+            background: #dcfce7;
+            padding: 9px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 3px 12px #0000000a;
+        }
+
+        .card h3 {
+            color: #64748b;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .value {
+            font-size: 38px;
+            font-weight: bold;
+        }
+
+        .temperature {
+            color: #ea580c;
+        }
+
+        .humidity {
+            color: #0284c7;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container h2 {
+            margin-bottom: 20px;
+            font-size: 19px;
+        }
+
+        .chart {
+            height: 300px;
+        }
+
+        .last-update {
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>🌡️ Smart Sensor Dashboard</h1>
+        <span class="status" id="status">Connexion...</span>
+    </header>
+
+    <!-- Cartes des mesures -->
+    <div class="cards">
+
+        <div class="card">
+            <h3>🌡️ Température</h3>
+
+            <div class="value temperature" id="temperature">
+                -- °C
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>💧 Humidité</h3>
+
+            <div class="value humidity" id="humidity">
+                -- %
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Graphique historique -->
+    <div class="chart-container">
+
+        <h2>Historique des mesures</h2>
+
+        <div class="chart">
+            <canvas id="sensorChart"></canvas>
+        </div>
+
+        <p class="last-update" id="lastUpdate">
+            En attente des données...
+        </p>
+
+    </div>
+
+</div>
+
+<script>
+
+    // Initialisation du graphique
+    const ctx = document.getElementById('sensorChart');
+
+    const sensorChart = new Chart(ctx, {
+        type: 'line',
+
+        data: {
+            labels: [],
+
+            datasets: [
+                {
+                    label: 'Température (°C)',
+                    data: [],
+                    borderColor: '#ea580c',
+                    backgroundColor: '#ea580c22',
+                    tension: 0.4,
+                    fill: true
+                },
+
+                {
+                    label: 'Humidité (%)',
+                    data: [],
+                    borderColor: '#0284c7',
+                    backgroundColor: '#0284c722',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+
+    // Récupération des données depuis Django
+    async function getSensorData() {
+
+        try {
+
+            const response = await fetch('/api/get');
+
+            if (!response.ok) {
+                throw new Error('Erreur HTTP : ' + response.status);
+            }
+
+            const result = await response.json();
+
+            console.log("Réponse API :", result);
+
+            // Récupération du tableau de mesures
+            const measurements = Array.isArray(result)
+                ? result
+                : result.data || result.results || [];
+
+            console.log("Mesures :", measurements);
+
+            // Vérifier si des mesures existent
+            if (!Array.isArray(measurements) || measurements.length === 0) {
+
+                document.getElementById('status').textContent =
+                    'Aucune mesure';
+
+                document.getElementById('temperature').textContent =
+                    '-- °C';
+
+                document.getElementById('humidity').textContent =
+                    '-- %';
+
+                document.getElementById('lastUpdate').textContent =
+                    'Aucune mesure disponible';
+
+                return;
+            }
+
+            // Trier les mesures par date
+            measurements.sort((a, b) =>
+                new Date(a.dt) - new Date(b.dt)
+            );
+
+            // Récupérer la dernière mesure
+            const latest = measurements[measurements.length - 1];
+
+            // Afficher la température réelle
+            document.getElementById('temperature').textContent =
+                latest.temperature + ' °C';
+
+            // Afficher l'humidité réelle
+            document.getElementById('humidity').textContent =
+                latest.humidity + ' %';
+
+            // Mettre à jour le statut
+            document.getElementById('status').textContent =
+                '● Connecté';
+
+            // Date de la dernière mesure
+            document.getElementById('lastUpdate').textContent =
+                'Dernière mesure : ' +
+                new Date(latest.dt).toLocaleString('fr-FR');
+
+            // Mettre à jour les labels du graphique
+            sensorChart.data.labels = measurements.map(item =>
+                new Date(item.dt).toLocaleTimeString('fr-FR')
+            );
+
+            // Données de température
+            sensorChart.data.datasets[0].data =
+                measurements.map(item => item.temperature);
+
+            // Données d'humidité
+            sensorChart.data.datasets[1].data =
+                measurements.map(item => item.humidity);
+
+            // Actualiser le graphique
+            sensorChart.update();
+
+        } catch (error) {
+
+            console.error("Erreur :", error);
+
+            document.getElementById('status').textContent =
+                'Erreur de connexion';
+
+            document.getElementById('lastUpdate').textContent =
+                'Impossible de récupérer les données';
+
+        }
+    }
+
+
+    // Première récupération des données
+    getSensorData();
+
+    // Actualisation automatique toutes les 10 secondes
+    setInterval(getSensorData, 10000);
+
+</script>
+
+</body>
+</html>

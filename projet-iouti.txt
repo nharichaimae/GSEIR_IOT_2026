@@ -1,0 +1,41 @@
+back end => django 
+2 function post get pour comunique avec les autre client 
+poste a travers l'api 
+oython 3.
+pip install Django django_rest_framework
+
+les commende pour le projet : 
+python -m venv venv
+pip install django djangorestframework
+pip freeze 
+pip freeze > requirements.txt 
+django-admin startproject projet .  pour creer le projet 
+django-admin startapp DHT  pour creer application 
+python manage.py runserver pour lancer   http://10.9.10.181:8000/test/
+
+pour poste la donne avec dht il faut l'adress ip en l'ajouter dans la commnde de lancement 
+
+python manage.py runserver 10.9.10.181:8000
+
+
+la creation d'un admin :
+
+python manage.py makemigration
+python manage.py migrate
+python manage.py createsuperuser username=admin  password=adminadmin http://10.9.10.181:8000/admin/
+
+http://10.9.10.181:8000/api/post
+http://10.9.10.181:8000/api/get
+
+modul envoyer la temperateur if la temperateur >a 25 send email 
+
+
+dans telegrame la creation d'in bot 
+botfhater qui va cre le bot 
+/newbot
+alertes_iot le nom du bot 
+alertes_iot_bot le user name 
+token de bot et le pose dans setting 
+
+installe iblio telebot
+
